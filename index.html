@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage Finder Enterprise - 650+ Aziende</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2563EB;     /* Blue 600 */
+            --primary-dark: #1E40AF; /* Blue 800 */
+            --accent: #F59E0B;      /* Amber 500 */
+            --bg-page: #F3F4F6;
+            --white: #ffffff;
+            --text-dark: #111827;
+            --text-gray: #6B7280;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-page);
+            height: 100vh;
+            color: var(--text-dark);
+            overflow: hidden;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--white);
+            padding: 15px 30px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: #EFF6FF;
+            color: var(--primary-dark);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* MAIN CONTENT */
+        .main-container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--white);
+            border-right: 1px solid #E5E7EB;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .filters-area {
+            padding: 20px;
+            border-bottom: 1px solid #E5E7EB;
+            background: #FAFAFA;
+        }
+
+        .scrollable-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #F9FAFB;
+        }
+
+        /* FORM ELEMENTS */
+        .form-group { margin-bottom: 15px; }
+        .label { 
+            font-size: 0.75rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            color: var(--text-gray); 
+            margin-bottom: 6px; 
+            letter-spacing: 0.05em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .search-row { display: flex; gap: 8px; }
+        .btn-search {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-search:hover { background: var(--primary-dark); }
+
+        /* Radius Toggles */
+        .toggle-group {
+            display: flex;
+            background: #E5E7EB;
+            padding: 3px;
+            border-radius: 8px;
+        }
+        .toggle-btn {
+            flex: 1;
+            text-align: center;
+            padding: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-gray);
+            font-weight: 600;
+        }
+        .toggle-btn.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* CARDS */
+        .company-card {
+            background: var(--white);
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .company-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-top { display: flex; justify-content: space-between; align-items: start; }
+        .company-name { font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+        .company-city { font-size: 0.85rem; color: var(--text-gray); display: flex; align-items: center; gap: 4px; }
+        
+        .dist-badge {
+            background: #DCFCE7; color: #166534;
+            font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;
+        }
+
+        .tags-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+        .tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #EFF6FF; color: var(--primary); }
+        .tag.hire { background: #FEF3C7; color: #B45309; }
+
+        /* MAP */
+        #map { width: 100%; height: 100%; background: #e5e7eb; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            .sidebar { order: 2; height: 50vh; }
+            #map { height: 50vh; order: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <header>
+        <div class="brand">🚀 StageFinder <span style="font-size:0.8em; font-weight:400; color:#666;">Enterprise</span></div>
+        <div class="stats-bar">
+            <span class="stat-item">🏢 <span id="countTotal">0</span> Aziende</span>
+            <span class="stat-item">📍 <span id="countVisible">0</span> Filtrate</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="filters-area">
+                
+                <div class="form-group">
+                    <div class="label">La tua Posizione</div>
+                    <div class="search-row">
+                        <input type="text" id="userAddress" placeholder="Città o indirizzo..." value="Torino">
+                        <button class="btn-search" onclick="geocodeAddress()">🔍</button>
+                    </div>
+                    <small style="color:var(--primary); cursor:pointer; margin-top:5px; display:inline-block;" onclick="getUserLocation()">📡 Usa GPS attuale</small>
+                </div>
+
+                <div class="form-group">
+                    <div class="label">Raggio di ricerca</div>
+                    <div class="toggle-group">
+                        <div class="toggle-btn" onclick="setRadius(5)">5km</div>
+                        <div class="toggle-btn active" onclick="setRadius(10)">10km</div>
+                        <div class="toggle-btn" onclick="setRadius(50)">50km</div>
+                        <div class="toggle-btn" onclick="setRadius(9999)">Tutta Italia</div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <div class="label">Città</div>
+                        <select id="cityFilter" onchange="applyFilters()">
+                            <option value="">Tutte</option>
+                            <option value="Torino">Torino</option>
+                            <option value="Fuori Torino">Fuori Torino (Prov.)</option>
+                            <option value="Milano">Milano</option>
+                            <option value="Roma">Roma</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="label">Settore</div>
+                        <select id="sectorFilter" onchange="applyFilters()">
+                            <option value="">Tutti</option>
+                            </select>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="hireFilter" onchange="applyFilters()">
+                    <label for="hireFilter" style="font-size:0.85rem; cursor:pointer;">Solo con assunzione finale</label>
+                </div>
+
+            </div>
+
+            <div class="scrollable-list" id="companyList">
+                <div style="text-align:center; padding:20px;">Caricamento database...</div>
+            </div>
+        </aside>
+
+        <main>
+            <div id="map"></div>
+        </main>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+    /* =========================================
+       1. GENERAZIONE DATI (BACKEND SIMULATO)
+       ========================================= */
+    const SECTORS = ['Informatica', 'Meccanica', 'Marketing', 'Finanza', 'Ristorazione', 'Elettronica', 'Moda', 'Logistica'];
+    const COMPANY_SUFFIXES = ['Solutions', 'Systems', 'SRL', 'SPA', 'Group', 'Consulting', 'Tech', 'Digital', 'Industries'];
+    
+    // Centri geografici di riferimento
+    const LOCATIONS = {
+        'Torino': { lat: 45.0703, lng: 7.6869, weight: 0.4 }, // 40%
+        'Fuori Torino': { lat: 45.0703, lng: 7.6869, weight: 0.3, spread: 0.15 }, // 30% (Raggio più ampio per Rivoli, Moncalieri ecc)
+        'Milano': { lat: 45.4642, lng: 9.1900, weight: 0.2 }, // 20%
+        'Roma': { lat: 41.9028, lng: 12.4964, weight: 0.1 }   // 10%
+    };
+
+    function generateMockData() {
+        let data = [];
+        let idCounter = 1;
+
+        // Helper: Random float tra min e max
+        const random = (min, max) => Math.random() * (max - min) + min;
+        // Helper: Random item from array
+        const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        // Genera 650 aziende
+        for (let i = 0; i < 650; i++) {
+            // Determina la città basandosi sul peso (Probabilità)
+            let rand = Math.random();
+            let cityKey = 'Torino'; // default
+            
+            if (rand > 0.9) cityKey = 'Roma';
+            else if (rand > 0.7) cityKey = 'Milano';
+            else if (rand > 0.4) cityKey = 'Fuori Torino';
+
+            const center = LOCATIONS[cityKey];
+            
+            // Calcola offset coordinate (Spread).
+            // Se è "Torino" centro, spread basso. Se "Fuori Torino", spread alto.
+            const spread = cityKey === 'Fuori Torino' ? 0.2 : 0.04; 
+            
+            // Genera lat/lng random attorno al centro
+            const lat = center.lat + random(-spread, spread);
+            const lng = center.lng + random(-spread, spread);
+
+            // Genera Nome Comune realistico (Semplicistico)
+            let comuneName = cityKey;
+            if (cityKey === 'Fuori Torino') {
+                const comuniHinterland = ['Rivoli', 'Moncalieri', 'Grugliasco', 'Settimo T.se', 'Chieri', 'Orbassano'];
+                comuneName = pick(comuniHinterland);
+            }
+
+            // Crea oggetto azienda
+            data.push({
+                id: idCounter++,
+                name: `${pick(SECTORS)} ${pick(COMPANY_SUFFIXES)}`,
+                cityCategory: cityKey, // Per filtri interni
+                cityDisplay: comuneName, // Da mostrare
+                address: `Via Generica ${Math.floor(random(1, 200))}`,
+                lat: lat,
+                lng: lng,
+                sector: pick(SECTORS),
+                stage: Math.random() > 0.2, // 80% ha stage
+                hiring: Math.random() > 0.6 // 40% assume
+            });
+        }
+        return data;
+    }
+
+    /* =========================================
+       2. LOGICA APPLICAZIONE (FRONTEND)
+       ========================================= */
+    
+    let map, markerCluster;
+    let userMarker, userCircle;
+    let userLocation = { lat: 45.0703, lng: 7.6869 }; // Start Torino
+    let currentRadius = 10;
+    
+    // Carica dati
+    const companiesData = generateMockData();
+    let filteredData = [];
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        populateFilters();
+        applyFilters();
+    });
+
+    function initMap() {
+        map = L.map('map').setView([userLocation.lat, userLocation.lng], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Inizializza Cluster Group (Fondamentale per 650 markers)
+        markerCluster = L.markerClusterGroup({
+            showCoverageOnHover: false,
+            maxClusterRadius: 50
+        });
+        map.addLayer(markerCluster);
+
+        drawUserLocation();
+    }
+
+    function populateFilters() {
+        // Popola select settori
+        const sectors = [...new Set(companiesData.map(c => c.sector))].sort();
+        const sel = document.getElementById('sectorFilter');
+        sectors.forEach(s => {
+            let opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            sel.appendChild(opt);
+        });
+        
+        // Aggiorna contatore totale
+        document.getElementById('countTotal').innerText = companiesData.length;
+    }
+
+    function drawUserLocation() {
+        if (userMarker) map.removeLayer(userMarker);
+        if (userCircle) map.removeLayer(userCircle);
+
+        // User Pin
+        userMarker = L.marker([userLocation.lat, userLocation.lng], {
+            icon: L.divIcon({
+                className: 'user-pin',
+                html: '<div style="background:#EF4444; width:15px; height:15px; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>'
+            })
+        }).addTo(map);
+
+        // Cerchio Raggio
+        if (currentRadius < 9000) { // Se non "Tutta Italia"
+            userCircle = L.circle([userLocation.lat, userLocation.lng], {
+                radius: currentRadius * 1000,
+                color: '#2563EB',
+                fillOpacity: 0.05,
+                weight: 1
+            }).addTo(map);
+        }
+    }
+
+    function applyFilters() {
+        const cityCat = document.getElementById('cityFilter').value;
+        const sector = document.getElementById('sectorFilter').value;
+        const onlyHire = document.getElementById('hireFilter').checked;
+        const search = document.getElementById('userAddress').value; // Usato qui come filtro testo solo se serve
+
+        filteredData = companiesData.filter(c => {
+            // 1. Calcola distanza
+            c.distance = getDistance(userLocation.lat, userLocation.lng, c.lat, c.lng);
+
+            // 2. Filtro Raggio (Se radius > 9000, ignora distanza)
+            if (currentRadius < 9000 && c.distance > currentRadius) return false;
+
+            // 3. Filtro Città (Category)
+            if (cityCat && c.cityCategory !== cityCat) return false;
+
+            // 4. Filtro Settore
+            if (sector && c.sector !== sector) return false;
+
+            // 5. Filtro Assunzione
+            if (onlyHire && !c.hiring) return false;
+
+            return true;
+        });
+
+        // Ordina per distanza
+        filteredData.sort((a, b) => a.distance - b.distance);
+
+        updateUI();
+    }
+
+    function updateUI() {
+        // 1. Aggiorna Lista (Limitata a 50 per performance DOM)
+        const listContainer = document.getElementById('companyList');
+        const countVisible = document.getElementById('countVisible');
+        
+        countVisible.innerText = filteredData.length;
+
+        if (filteredData.length === 0) {
+            listContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">Nessuna azienda trovata con questi filtri.</div>';
+        } else {
+            // Renderizza solo i primi 50 nella sidebar
+            const itemsToShow = filteredData.slice(0, 50);
+            listContainer.innerHTML = itemsToShow.map(c => `
+                <div class="company-card" onclick="zoomTo(${c.lat}, ${c.lng})">
+                    <div class="card-top">
+                        <div class="company-name">${c.name}</div>
+                        <span class="dist-badge">${c.distance.toFixed(1)} km</span>
+                    </div>
+                    <div class="company-city">📍 ${c.cityDisplay} (${c.address})</div>
+                    <div class="tags-row">
+                        <span class="tag">${c.sector}</span>
+                        ${c.hiring ? '<span class="tag hire">Assunzione</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            if (filteredData.length > 50) {
+                listContainer.innerHTML += `<div style="text-align:center; padding:10px; font-size:0.8rem; color:#666;">...e altre ${filteredData.length - 50} aziende sulla mappa</div>`;
+            }
+        }
+
+        // 2. Aggiorna Mappa (Cluster)
+        markerCluster.clearLayers();
+        const markers = filteredData.map(c => {
+            const m = L.marker([c.lat, c.lng]);
+            m.bindPopup(`<b>${c.name}</b><br>${c.cityDisplay}<br>${c.sector}<br><br><a href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank">Indicazioni Stradali</a>`);
+            return m;
+        });
+        markerCluster.addLayers(markers);
+    }
+
+    // --- Utilities & Geocoding ---
+
+    function setRadius(km) {
+        currentRadius = km;
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        drawUserLocation();
+        applyFilters();
+        if(userCircle && km < 9000) map.fitBounds(userCircle.getBounds());
+        else map.setView([userLocation.lat, userLocation.lng], 6); // Zoom out per tutta Italia
+    }
+
+    async function geocodeAddress() {
+        const addr = document.getElementById('userAddress').value;
+        if (!addr) return;
+        
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&countrycodes=it&limit=1`);
+            const json = await res.json();
+            if (json.length > 0) {
+                userLocation = { lat: parseFloat(json[0].lat), lng: parseFloat(json[0].lon) };
+                drawUserLocation();
+                applyFilters();
+                map.setView([userLocation.lat, userLocation.lng], 12);
+            } else {
+                alert('Indirizzo non trovato');
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    function getUserLocation() {
+        navigator.geolocation.getCurrentPosition(pos => {
+            userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            document.getElementById('userAddress').value = "Posizione GPS";
+            drawUserLocation();
+            applyFilters();
+            map.setView([userLocation.lat, userLocation.lng], 13);
+        });
+    }
+
+    function zoomTo(lat, lng) {
+        map.flyTo([lat, lng], 16);
+    }
+
+    // Helper Math
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; 
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+</script>
+
+</body>
+</html>
